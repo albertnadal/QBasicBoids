@@ -21,9 +21,9 @@ RANDOMIZE TIMER
 
 CONST SCREENWIDTH = 319
 CONST SCREENHEIGHT = 199
-CONST NUMBOIDS = 20
+CONST NUMBOIDS = 30
 CONST NEIGHBORRADIUS = 10!
-CONST MAXSPEED = 2.5
+CONST MAXSPEED = 3.5
 CONST CROWDRADIUS = NEIGHBORRADIUS * .25
 
 SCREEN 1
@@ -37,6 +37,7 @@ TYPE TBoid
  id AS INTEGER
  position AS TVector
  prevPosition AS TVector
+ prevPrevPosition AS TVector
  movement AS TVector
  totalNeighbours AS INTEGER
 END TYPE
@@ -49,7 +50,7 @@ CALL initializeBoids
 FOR i = 0 TO 350
   CALL updateBoids
   CALL drawBoids
-  CALL delay(.03)
+  'CALL delay(.03)
 NEXT i
 
 END
@@ -134,8 +135,8 @@ SUB computeBoidForces (boid AS TBoid)
   NEXT idx
 
   ' Create noise movement
-  boid.movement.x = boid.movement.x + (.05 * ((RND(1) * 2!) - 1!))
-  boid.movement.y = boid.movement.y + (.05 * ((RND(1) * 2!) - 1!))
+  boid.movement.x = boid.movement.x + (.25 * ((RND(1) * 2!) - 1!))
+  boid.movement.y = boid.movement.y + (.25 * ((RND(1) * 2!) - 1!))
 
   ' Limit the movement
   magnitude! = getVectorMagnitude(boid.movement)
@@ -153,8 +154,10 @@ SUB delay (seconds#)
 END SUB
 
 SUB drawBoid (boid AS TBoid)
-  PSET (boid.prevPosition.x, boid.prevPosition.y), 0
-  PSET (boid.position.x, boid.position.y), 1
+  LINE (boid.prevPrevPosition.x, boid.prevPrevPosition.y)-(boid.prevPosition.x, boid.prevPosition.y), 0
+  IF (ABS(boid.prevPosition.x - boid.position.x) < (SCREENWIDTH - MAXSPEED)) AND (ABS(boid.prevPosition.y - boid.position.y) < (SCREENHEIGHT - MAXSPEED)) THEN
+    LINE (boid.prevPosition.x, boid.prevPosition.y)-(boid.position.x, boid.position.y), 1
+  END IF
 END SUB
 
 SUB drawBoids
@@ -220,6 +223,8 @@ SUB updateBoidNeighbors (boid AS TBoid)
 END SUB
 
 SUB updateBoidPosition (boid AS TBoid)
+  boid.prevPrevPosition.x = boid.prevPosition.x
+  boid.prevPrevPosition.y = boid.prevPosition.y
   boid.prevPosition.x = boid.position.x
   boid.prevPosition.y = boid.position.y
   boid.position.x = (boid.position.x + boid.movement.x + SCREENWIDTH) MOD SCREENWIDTH
