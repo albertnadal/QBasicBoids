@@ -1,3 +1,5 @@
+DECLARE SUB setVectorMagnitude (a AS ANY, m AS SINGLE)
+DECLARE SUB calculateVectorSubstraction (a AS ANY, b AS ANY)
 DECLARE SUB calculateVectorDivision (a AS ANY, value AS SINGLE)
 DECLARE SUB calculateVectorNormalization (inputVector AS ANY, normalizedVector AS ANY)
 DECLARE SUB calculateNormalizedVector (inputVector AS ANY, normalizedVector AS ANY)
@@ -67,8 +69,12 @@ SUB calculateVectorNormalization (inputVector AS TVector, normalizedVector AS TV
   END IF
 END SUB
 
+SUB calculateVectorSubstraction (a AS TVector, b AS TVector)
+  a.x = a.x - b.x
+  a.y = a.y - b.x
+END SUB
+
 SUB computeBoidForces (boid AS TBoid)
-  DIM alignVector AS TVector
   DIM neighbor AS TBoid
 
   ' Calculate the alignment between the boid and its neighbors
@@ -84,6 +90,30 @@ SUB computeBoidForces (boid AS TBoid)
       boid.movement.y = boid.movement.y + normalizedVector.y
     END IF
   NEXT idx
+
+  ' Calculate the cohesion force
+  DIM cohesionVector AS TVector
+  cohesionVector.x = 0
+  cohesionVector.y = 0
+  cohesionCount! = 0!
+  FOR idx = 0 TO boid.totalNeighbours
+    neighborId = neighbours(boid.id, idx)
+    neighbor = boids(neighborId)
+    distance! = getDistanceBetweenPoints(boid.position, neighbor.position)
+    IF ((distance! > 0) AND (distance < NEIGHBORRADIUS)) THEN
+      cohesionVector.x = cohesionVector.x + neighbor.position.x
+      cohesionVector.y = cohesionVector.y + neighbor.position.y
+      cohesionCount! = cohesionCount! + 1!
+    END IF
+  NEXT idx
+
+  IF cohesionCount! > 0! THEN
+    CALL calculateVectorDivision(cohesionVector, cohesionCount!)
+    CALL calculateVectorSubstraction(cohesionVector, boid.position)
+    CALL setVectorMagnitude(cohesionVector, .05)
+    boid.movement.x = boid.movement.x + cohesionVector.x
+    boid.movement.y = boid.movement.y + cohesionVector.y
+  END IF
 
   ' Create noise movement
   boid.movement.x = boid.movement.x + (.05 * ((RND(1) * 2!) - 1!))
@@ -142,6 +172,15 @@ FUNCTION min! (a AS SINGLE, b AS SINGLE)
     min = b
   END IF
 END FUNCTION
+
+SUB setVectorMagnitude (a AS TVector, m AS SINGLE)
+  magnitude! = getVectorMagnitude(a)
+  IF magnitude! > 0! THEN
+    ratio! = m / magnitude!
+    a.x = a.x * ratio!
+    a.y = a.y * ratio!
+  END IF
+END SUB
 
 SUB updateBoid (boid AS TBoid)
   CALL updateBoidNeighbors(boid)
