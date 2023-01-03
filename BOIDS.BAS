@@ -21,9 +21,10 @@ RANDOMIZE TIMER
 
 CONST SCREENWIDTH = 319
 CONST SCREENHEIGHT = 199
-CONST NUMBOIDS = 10
-CONST NEIGHBORRADIUS = 5!
-CONST MAXSPEED = 2!
+CONST NUMBOIDS = 20
+CONST NEIGHBORRADIUS = 10!
+CONST MAXSPEED = 2.5
+CONST CROWDRADIUS = NEIGHBORRADIUS * .25
 
 SCREEN 1
 
@@ -45,7 +46,7 @@ DIM SHARED boids(NUMBOIDS) AS TBoid
 
 CALL initializeBoids
 
-FOR i = 0 TO 850
+FOR i = 0 TO 350
   CALL updateBoids
   CALL drawBoids
   CALL delay(.03)
@@ -76,9 +77,9 @@ END SUB
 
 SUB computeBoidForces (boid AS TBoid)
   DIM neighbor AS TBoid
-
-  ' Calculate the alignment between the boid and its neighbors
   DIM normalizedVector AS TVector
+ 
+  ' Calculate the alignment between the boid and its neighbors
   FOR idx = 0 TO boid.totalNeighbours
     neighborId = neighbours(boid.id, idx)
     neighbor = boids(neighborId)
@@ -114,6 +115,23 @@ SUB computeBoidForces (boid AS TBoid)
     boid.movement.x = boid.movement.x + cohesionVector.x
     boid.movement.y = boid.movement.y + cohesionVector.y
   END IF
+
+  ' Calculate the separation force
+  DIM distanceVector AS TVector
+  FOR idx = 0 TO boid.totalNeighbours
+    neighborId = neighbours(boid.id, idx)
+    neighbor = boids(neighborId)
+    distance! = getDistanceBetweenPoints(boid.position, neighbor.position)
+    IF ((distance! > 0) AND (distance < CROWDRADIUS)) THEN
+      distanceVector.x = boid.position.x
+      distanceVector.y = boid.position.y
+      CALL calculateVectorSubstraction(distanceVector, neighbor.position)
+      CALL calculateVectorNormalization(distanceVector, normalizedVector)
+      CALL calculateVectorDivision(normalizedVector, distance!)
+      boid.movement.x = boid.movement.x + normalizedVector.x
+      boid.movement.y = boid.movement.y + normalizedVector.y
+    END IF
+  NEXT idx
 
   ' Create noise movement
   boid.movement.x = boid.movement.x + (.05 * ((RND(1) * 2!) - 1!))
