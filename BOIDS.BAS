@@ -10,7 +10,6 @@ DECLARE SUB calculateNormalizedVector (inputVector AS ANY, normalizedVector AS A
 DECLARE FUNCTION getVectorMagnitude! (a AS ANY)
 DECLARE FUNCTION getDistanceBetweenPoints! (a AS ANY, b AS ANY)
 DECLARE SUB updateBoidPosition (boid AS ANY)
-DECLARE FUNCTION min! (a AS SINGLE, b AS SINGLE)
 DECLARE SUB computeBoidForces (boid AS ANY)
 DECLARE SUB updateBoidNeighbors (boid AS ANY)
 DECLARE SUB updateBoid (boid AS ANY)
@@ -249,14 +248,6 @@ SUB initializeObstacles
     obstacles(id).position.y = INT(RND * (SCREENHEIGHT - (OBSTACLERADIUS * 2!) + 1!) + OBSTACLERADIUS)
   NEXT id
 END SUB
-
-FUNCTION min! (a AS SINGLE, b AS SINGLE)
-  IF a < b THEN
-    min = a
-  ELSE
-    min = b
-  END IF
-END FUNCTION
 
 SUB restartValues
   CALL initializeBoids
