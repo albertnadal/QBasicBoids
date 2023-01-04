@@ -1,3 +1,6 @@
+DECLARE SUB drawObstacle (obstacle AS ANY)
+DECLARE SUB drawObstacles ()
+DECLARE SUB initializeObstacles ()
 DECLARE SUB setVectorMagnitude (a AS ANY, m AS SINGLE)
 DECLARE SUB calculateVectorSubstraction (a AS ANY, b AS ANY)
 DECLARE SUB calculateVectorDivision (a AS ANY, value AS SINGLE)
@@ -21,10 +24,13 @@ RANDOMIZE TIMER
 
 CONST SCREENWIDTH = 319
 CONST SCREENHEIGHT = 199
-CONST NUMBOIDS = 30
-CONST NEIGHBORRADIUS = 10!
+CONST NUMOBSTACLES = 4
+CONST OBSTACLERADIUS = 10!
+CONST OBSTACLEACTIONRADIUS = 40!
+CONST NUMBOIDS = 8
+CONST NEIGHBORRADIUS = 18!
 CONST MAXSPEED = 3.5
-CONST CROWDRADIUS = NEIGHBORRADIUS * .25
+CONST CROWDRADIUS = 8!
 
 SCREEN 1
 
@@ -42,15 +48,24 @@ TYPE TBoid
  totalNeighbours AS INTEGER
 END TYPE
 
+TYPE TObstacle
+ position AS TVector
+END TYPE
+
 DIM SHARED neighbours(NUMBOIDS, NUMBOIDS) AS INTEGER
 DIM SHARED boids(NUMBOIDS) AS TBoid
+DIM SHARED obstacles(NUMOBSTACLES) AS TObstacle
 
 CALL initializeBoids
+CALL initializeObstacles
 
-FOR i = 0 TO 350
+CALL drawObstacles
+
+FOR i = 0 TO 450
   CALL updateBoids
   CALL drawBoids
-  'CALL delay(.03)
+  'CALL drawObstacles
+  CALL delay(.03)
 NEXT i
 
 END
@@ -78,14 +93,15 @@ END SUB
 
 SUB computeBoidForces (boid AS TBoid)
   DIM neighbor AS TBoid
+  DIM obstacle AS TObstacle
   DIM normalizedVector AS TVector
  
   ' Calculate the alignment between the boid and its neighbors
-  FOR idx = 0 TO boid.totalNeighbours
+  FOR idx = 0 TO boid.totalNeighbours - 1
     neighborId = neighbours(boid.id, idx)
     neighbor = boids(neighborId)
     distance! = getDistanceBetweenPoints(boid.position, neighbor.position)
-    IF ((distance! > 0) AND (distance < NEIGHBORRADIUS)) THEN
+    IF ((distance! > 0) AND (distance! < NEIGHBORRADIUS)) THEN
       CALL calculateVectorNormalization(neighbor.movement, normalizedVector)
       CALL calculateVectorDivision(normalizedVector, distance!)
       boid.movement.x = boid.movement.x + normalizedVector.x
@@ -98,11 +114,11 @@ SUB computeBoidForces (boid AS TBoid)
   cohesionVector.x = 0
   cohesionVector.y = 0
   cohesionCount! = 0!
-  FOR idx = 0 TO boid.totalNeighbours
+  FOR idx = 0 TO boid.totalNeighbours - 1
     neighborId = neighbours(boid.id, idx)
     neighbor = boids(neighborId)
     distance! = getDistanceBetweenPoints(boid.position, neighbor.position)
-    IF ((distance! > 0) AND (distance < NEIGHBORRADIUS)) THEN
+    IF ((distance! > 0) AND (distance! < NEIGHBORRADIUS)) THEN
       cohesionVector.x = cohesionVector.x + neighbor.position.x
       cohesionVector.y = cohesionVector.y + neighbor.position.y
       cohesionCount! = cohesionCount! + 1!
@@ -119,11 +135,11 @@ SUB computeBoidForces (boid AS TBoid)
 
   ' Calculate the separation force
   DIM distanceVector AS TVector
-  FOR idx = 0 TO boid.totalNeighbours
+  FOR idx = 0 TO boid.totalNeighbours - 1
     neighborId = neighbours(boid.id, idx)
     neighbor = boids(neighborId)
     distance! = getDistanceBetweenPoints(boid.position, neighbor.position)
-    IF ((distance! > 0) AND (distance < CROWDRADIUS)) THEN
+    IF ((distance! > 0!) AND (distance! < CROWDRADIUS)) THEN
       distanceVector.x = boid.position.x
       distanceVector.y = boid.position.y
       CALL calculateVectorSubstraction(distanceVector, neighbor.position)
@@ -133,6 +149,21 @@ SUB computeBoidForces (boid AS TBoid)
       boid.movement.y = boid.movement.y + normalizedVector.y
     END IF
   NEXT idx
+
+  ' Calculate force to avoid obstacles
+  FOR id = 0 TO NUMOBSTACLES - 1
+    obstacle = obstacles(id)
+    distance! = getDistanceBetweenPoints(boid.position, obstacle.position)
+    IF ((distance! > 0!) AND (distance! < OBSTACLEACTIONRADIUS)) THEN
+      distanceVector.x = boid.position.x
+      distanceVector.y = boid.position.y
+      CALL calculateVectorSubstraction(distanceVector, obstacle.position)
+      CALL calculateVectorNormalization(distanceVector, normalizedVector)
+      CALL calculateVectorDivision(normalizedVector, distance!)
+      boid.movement.x = boid.movement.x + 6! * normalizedVector.x
+      boid.movement.y = boid.movement.y + 6! * normalizedVector.y
+    END IF
+  NEXT id
 
   ' Create noise movement
   boid.movement.x = boid.movement.x + (.25 * ((RND(1) * 2!) - 1!))
@@ -155,14 +186,26 @@ END SUB
 
 SUB drawBoid (boid AS TBoid)
   LINE (boid.prevPrevPosition.x, boid.prevPrevPosition.y)-(boid.prevPosition.x, boid.prevPosition.y), 0
-  IF (ABS(boid.prevPosition.x - boid.position.x) < (SCREENWIDTH - MAXSPEED)) AND (ABS(boid.prevPosition.y - boid.position.y) < (SCREENHEIGHT - MAXSPEED)) THEN
+  IF (ABS(boid.prevPosition.x - boid.position.x) < (SCREENWIDTH - MAXSPEED - 1)) AND (ABS(boid.prevPosition.y - boid.position.y) < (SCREENHEIGHT - MAXSPEED - 1)) THEN
     LINE (boid.prevPosition.x, boid.prevPosition.y)-(boid.position.x, boid.position.y), 1
   END IF
 END SUB
 
 SUB drawBoids
-  FOR id = 0 TO NUMBOIDS
+  FOR id = 0 TO NUMBOIDS - 1
     CALL drawBoid(boids(id))
+  NEXT id
+END SUB
+
+SUB drawObstacle (obstacle AS TObstacle)
+  CIRCLE (obstacle.position.x, obstacle.position.y), OBSTACLERADIUS, 2
+  CIRCLE (obstacle.position.x, obstacle.position.y), OBSTACLEACTIONRADIUS, 3
+  PSET (obstacle.position.x, obstacle.position.y), 3
+END SUB
+
+SUB drawObstacles
+  FOR id = 0 TO NUMOBSTACLES - 1
+    CALL drawObstacle(obstacles(id))
   NEXT id
 END SUB
 
@@ -175,7 +218,8 @@ FUNCTION getVectorMagnitude! (a AS TVector)
 END FUNCTION
 
 SUB initializeBoids
-  FOR id = 0 TO NUMBOIDS
+  FOR id = 0 TO NUMBOIDS - 1
+    boids(id).id = id
     boids(id).position.x = INT(RND * (SCREENWIDTH + 1))
     boids(id).position.y = INT(RND * (SCREENHEIGHT + 1))
     boids(id).prevPosition.x = boids(id).position.x
@@ -183,6 +227,13 @@ SUB initializeBoids
     boids(id).movement.x = .5 * ((RND(1) * 2!) - 1!)
     boids(id).movement.y = .5 * ((RND(1) * 2!) - 1!)
     boids(id).totalNeighbours = 0
+  NEXT id
+END SUB
+
+SUB initializeObstacles
+  FOR id = 0 TO NUMOBSTACLES - 1
+    obstacles(id).position.x = INT(RND * (SCREENWIDTH - (OBSTACLERADIUS * 2!) + 1!) + OBSTACLERADIUS)
+    obstacles(id).position.y = INT(RND * (SCREENHEIGHT - (OBSTACLERADIUS * 2!) + 1!) + OBSTACLERADIUS)
   NEXT id
 END SUB
 
@@ -211,15 +262,15 @@ END SUB
 
 SUB updateBoidNeighbors (boid AS TBoid)
   numNeighbors% = 0
-  FOR id = 0 TO NUMBOIDS
+  FOR id = 0 TO NUMBOIDS - 1
     IF id <> boid.id THEN
       IF (ABS(boids(id).position.x - boid.position.x) < NEIGHBORRADIUS) AND (ABS(boids(id).position.y - boid.position.y) < NEIGHBORRADIUS) THEN
-	neighbours(boid.id, numNeighbors) = id
-	numNeighbors = numNeighbors + 1
+	neighbours(boid.id, numNeighbors%) = id
+	numNeighbors% = numNeighbors% + 1
       END IF
     END IF
   NEXT id
-  boid.totalNeighbours = numNeighbors
+  boid.totalNeighbours = numNeighbors%
 END SUB
 
 SUB updateBoidPosition (boid AS TBoid)
@@ -232,7 +283,7 @@ SUB updateBoidPosition (boid AS TBoid)
 END SUB
 
 SUB updateBoids
-  FOR id = 0 TO NUMBOIDS
+  FOR id = 0 TO NUMBOIDS - 1
     CALL updateBoid(boids(id))
   NEXT id
 END SUB
