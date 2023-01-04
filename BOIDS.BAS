@@ -1,3 +1,4 @@
+DECLARE SUB restartValues ()
 DECLARE SUB drawObstacle (obstacle AS ANY)
 DECLARE SUB drawObstacles ()
 DECLARE SUB initializeObstacles ()
@@ -59,12 +60,24 @@ SCREEN 1
 CALL initializeBoids
 CALL initializeObstacles
 
-FOR i = 0 TO 250
-  CALL updateBoids
-  CALL drawBoids
-  CALL drawObstacles
-  'CALL delay(.03)
-NEXT i
+DO UNTIL key$ = "n"
+  CLS
+  FOR i = 0 TO 500
+    CALL updateBoids
+    CALL drawBoids
+    CALL drawObstacles
+    'CALL delay(.03)
+  NEXT i
+
+  LOCATE 1, 1
+  PRINT "Continue(Yes/No/Restart)"
+  LOCATE 1, 25
+  INPUT key$
+  key$ = LCASE$(LEFT$(key$, 1))
+  IF key$ = "r" THEN
+    CALL restartValues
+  END IF
+LOOP
 
 END
 
@@ -244,6 +257,11 @@ FUNCTION min! (a AS SINGLE, b AS SINGLE)
     min = b
   END IF
 END FUNCTION
+
+SUB restartValues
+  CALL initializeBoids
+  CALL initializeObstacles
+END SUB
 
 SUB setVectorMagnitude (a AS TVector, m AS SINGLE)
   magnitude! = getVectorMagnitude(a)
