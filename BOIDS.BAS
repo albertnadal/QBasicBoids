@@ -24,15 +24,13 @@ RANDOMIZE TIMER
 
 CONST SCREENWIDTH = 319
 CONST SCREENHEIGHT = 199
-CONST NUMOBSTACLES = 4
+CONST NUMOBSTACLES = 3
 CONST OBSTACLERADIUS = 10!
-CONST OBSTACLEACTIONRADIUS = 40!
-CONST NUMBOIDS = 8
-CONST NEIGHBORRADIUS = 18!
-CONST MAXSPEED = 3.5
-CONST CROWDRADIUS = 8!
-
-SCREEN 1
+CONST OBSTACLEACTIONRADIUS = 38!
+CONST NUMBOIDS = 20
+CONST NEIGHBORRADIUS = 26!
+CONST MAXSPEED = 3!
+CONST CROWDRADIUS = 6!
 
 TYPE TVector
  x AS SINGLE
@@ -56,16 +54,16 @@ DIM SHARED neighbours(NUMBOIDS, NUMBOIDS) AS INTEGER
 DIM SHARED boids(NUMBOIDS) AS TBoid
 DIM SHARED obstacles(NUMOBSTACLES) AS TObstacle
 
+SCREEN 1
+
 CALL initializeBoids
 CALL initializeObstacles
 
-CALL drawObstacles
-
-FOR i = 0 TO 450
+FOR i = 0 TO 250
   CALL updateBoids
   CALL drawBoids
-  'CALL drawObstacles
-  CALL delay(.03)
+  CALL drawObstacles
+  'CALL delay(.03)
 NEXT i
 
 END
@@ -88,14 +86,15 @@ END SUB
 
 SUB calculateVectorSubstraction (a AS TVector, b AS TVector)
   a.x = a.x - b.x
-  a.y = a.y - b.x
+  a.y = a.y - b.y
 END SUB
 
 SUB computeBoidForces (boid AS TBoid)
   DIM neighbor AS TBoid
   DIM obstacle AS TObstacle
   DIM normalizedVector AS TVector
- 
+  DIM distanceVector AS TVector
+
   ' Calculate the alignment between the boid and its neighbors
   FOR idx = 0 TO boid.totalNeighbours - 1
     neighborId = neighbours(boid.id, idx)
@@ -134,7 +133,6 @@ SUB computeBoidForces (boid AS TBoid)
   END IF
 
   ' Calculate the separation force
-  DIM distanceVector AS TVector
   FOR idx = 0 TO boid.totalNeighbours - 1
     neighborId = neighbours(boid.id, idx)
     neighbor = boids(neighborId)
@@ -160,14 +158,14 @@ SUB computeBoidForces (boid AS TBoid)
       CALL calculateVectorSubstraction(distanceVector, obstacle.position)
       CALL calculateVectorNormalization(distanceVector, normalizedVector)
       CALL calculateVectorDivision(normalizedVector, distance!)
-      boid.movement.x = boid.movement.x + 6! * normalizedVector.x
-      boid.movement.y = boid.movement.y + 6! * normalizedVector.y
+      boid.movement.x = boid.movement.x + 8! * normalizedVector.x
+      boid.movement.y = boid.movement.y + 8! * normalizedVector.y
     END IF
   NEXT id
 
   ' Create noise movement
-  boid.movement.x = boid.movement.x + (.25 * ((RND(1) * 2!) - 1!))
-  boid.movement.y = boid.movement.y + (.25 * ((RND(1) * 2!) - 1!))
+  boid.movement.x = boid.movement.x + (.35 * ((RND(1) * 2!) - 1!))
+  boid.movement.y = boid.movement.y + (.35 * ((RND(1) * 2!) - 1!))
 
   ' Limit the movement
   magnitude! = getVectorMagnitude(boid.movement)
@@ -199,8 +197,8 @@ END SUB
 
 SUB drawObstacle (obstacle AS TObstacle)
   CIRCLE (obstacle.position.x, obstacle.position.y), OBSTACLERADIUS, 2
-  CIRCLE (obstacle.position.x, obstacle.position.y), OBSTACLEACTIONRADIUS, 3
-  PSET (obstacle.position.x, obstacle.position.y), 3
+  'CIRCLE (obstacle.position.x, obstacle.position.y), OBSTACLEACTIONRADIUS, 3
+  'PSET (obstacle.position.x, obstacle.position.y), 3
 END SUB
 
 SUB drawObstacles
@@ -224,6 +222,8 @@ SUB initializeBoids
     boids(id).position.y = INT(RND * (SCREENHEIGHT + 1))
     boids(id).prevPosition.x = boids(id).position.x
     boids(id).prevPosition.y = boids(id).position.y
+    boids(id).prevPrevPosition.x = boids(id).position.x
+    boids(id).prevPrevPosition.y = boids(id).position.y
     boids(id).movement.x = .5 * ((RND(1) * 2!) - 1!)
     boids(id).movement.y = .5 * ((RND(1) * 2!) - 1!)
     boids(id).totalNeighbours = 0
