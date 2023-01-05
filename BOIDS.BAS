@@ -24,10 +24,10 @@ RANDOMIZE TIMER
 
 CONST SCREENWIDTH = 319
 CONST SCREENHEIGHT = 199
-CONST NUMOBSTACLES = 3
+CONST NUMOBSTACLES = 7
 CONST OBSTACLERADIUS = 10!
 CONST OBSTACLEACTIONRADIUS = 38!
-CONST NUMBOIDS = 20
+CONST NUMBOIDS = 50
 CONST NEIGHBORRADIUS = 26!
 CONST MAXSPEED = 3!
 CONST CROWDRADIUS = 6!
@@ -106,49 +106,32 @@ SUB computeBoidForces (boid AS TBoid)
   DIM obstacle AS TObstacle
   DIM normalizedVector AS TVector
   DIM distanceVector AS TVector
+  DIM cohesionVector AS TVector
+  cohesionVector.x = 0
+  cohesionVector.y = 0
+  cohesionCount! = 0!
 
-  ' Calculate the alignment between the boid and its neighbors
   FOR idx = 0 TO boid.totalNeighbours - 1
     neighborId = neighbours(boid.id, idx)
     neighbor = boids(neighborId)
     distance! = getDistanceBetweenPoints(boid.position, neighbor.position)
+   
+    ' Calculate the alignment between the boid and its neighbors
     IF ((distance! > 0) AND (distance! < NEIGHBORRADIUS)) THEN
       CALL calculateVectorNormalization(neighbor.movement, normalizedVector)
       CALL calculateVectorDivision(normalizedVector, distance!)
       boid.movement.x = boid.movement.x + normalizedVector.x
       boid.movement.y = boid.movement.y + normalizedVector.y
     END IF
-  NEXT idx
 
-  ' Calculate the cohesion force
-  DIM cohesionVector AS TVector
-  cohesionVector.x = 0
-  cohesionVector.y = 0
-  cohesionCount! = 0!
-  FOR idx = 0 TO boid.totalNeighbours - 1
-    neighborId = neighbours(boid.id, idx)
-    neighbor = boids(neighborId)
-    distance! = getDistanceBetweenPoints(boid.position, neighbor.position)
+    ' Calculate the cohesion force
     IF ((distance! > 0) AND (distance! < NEIGHBORRADIUS)) THEN
       cohesionVector.x = cohesionVector.x + neighbor.position.x
       cohesionVector.y = cohesionVector.y + neighbor.position.y
       cohesionCount! = cohesionCount! + 1!
     END IF
-  NEXT idx
 
-  IF cohesionCount! > 0! THEN
-    CALL calculateVectorDivision(cohesionVector, cohesionCount!)
-    CALL calculateVectorSubstraction(cohesionVector, boid.position)
-    CALL setVectorMagnitude(cohesionVector, .05)
-    boid.movement.x = boid.movement.x + cohesionVector.x
-    boid.movement.y = boid.movement.y + cohesionVector.y
-  END IF
-
-  ' Calculate the separation force
-  FOR idx = 0 TO boid.totalNeighbours - 1
-    neighborId = neighbours(boid.id, idx)
-    neighbor = boids(neighborId)
-    distance! = getDistanceBetweenPoints(boid.position, neighbor.position)
+    ' Calculate the separation force
     IF ((distance! > 0!) AND (distance! < CROWDRADIUS)) THEN
       distanceVector.x = boid.position.x
       distanceVector.y = boid.position.y
@@ -159,6 +142,14 @@ SUB computeBoidForces (boid AS TBoid)
       boid.movement.y = boid.movement.y + normalizedVector.y
     END IF
   NEXT idx
+
+  IF cohesionCount! > 0! THEN
+    CALL calculateVectorDivision(cohesionVector, cohesionCount!)
+    CALL calculateVectorSubstraction(cohesionVector, boid.position)
+    CALL setVectorMagnitude(cohesionVector, .05)
+    boid.movement.x = boid.movement.x + cohesionVector.x
+    boid.movement.y = boid.movement.y + cohesionVector.y
+  END IF
 
   ' Calculate force to avoid obstacles
   FOR id = 0 TO NUMOBSTACLES - 1
